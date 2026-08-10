@@ -1,0 +1,98 @@
+ESCALA — app Android nativa de alertas de scalping
+==================================================
+
+O que e diferente da versao web:
+  - Servico em primeiro plano. O Android mantem a app viva com o ecra
+    desligado, por causa do aviso permanente na barra de notificacoes.
+    O varrimento continua sem teres a app aberta.
+  - Fala directamente com a Yahoo Finance. Sem CORS, sem proxies.
+  - Volta a ligar sozinha depois de reiniciares o telemovel.
+
+
+COMPILAR (uma vez)
+------------------
+  1. Instala o Android Studio: developer.android.com/studio
+  2. Android Studio > Open > escolhe esta pasta (a que tem settings.gradle.kts)
+  3. Espera a sincronizacao. Da primeira vez descarrega o Gradle e o SDK;
+     pode demorar 10-20 minutos. Aceita as licencas que aparecerem.
+     Se pedir para actualizar o AGP ou o Gradle, aceita.
+  4. Liga o telemovel por cabo, com a depuracao USB activa
+     (Definicoes > Acerca > tocar 7x no numero de compilacao,
+      depois Opcoes de programador > Depuracao USB).
+  5. Carrega no triangulo verde (Run). Instala e abre no telemovel.
+
+  Para gerar um APK que possas guardar:
+     Build > Build Bundle(s)/APK(s) > Build APK(s)
+     O ficheiro fica em app/build/outputs/apk/debug/app-debug.apk
+
+
+CONFIGURAR (no telemovel)
+-------------------------
+  Definicoes > Capital da conta        base do 1% de risco por trade
+  Definicoes > Volume do mes           abaixo de 100.000 EUR nao ha comissao
+  Definicoes > Email + chave Web3Forms para receber os alertas por email
+
+  Toca em "Isentar da poupanca de bateria". Sem isso, o Android acaba por
+  matar o servico ao fim de algumas horas. Em telemoveis Xiaomi, Huawei,
+  Oppo e Samsung e preciso ainda marcar a app como "sem restricoes" ou
+  "arranque automatico" nas definicoes de bateria do fabricante.
+
+
+REGRAS FIXAS (nao editaveis)
+----------------------------
+  alerta so acima de 89 pontos (piso da banda B)
+  1% de risco por trade · R:R minimo 1:2 · alvo a 2,2x o risco
+  posicao minima 5.000 EUR · exposicao maxima 100% do capital
+  accoes inteiras · sem alertas novos depois das 16:00 (Lisboa)
+  peso 1,25x na primeira hora, 0,75x na segunda
+  veto se o atrito passar 45% do risco
+  veto se o alvo nao valer pelo menos 6x o spread de ida e volta
+  Sem limite de trades, sem paragem por perdas seguidas, sem stop diario.
+
+  Impostos de transacao modelados na compra:
+  Franca 0,30% · Espanha 0,20% · Italia 0,10%
+  Alemanha, Holanda, Portugal, Finlandia e Belgica a zero.
+
+
+LIMITES REAIS
+-------------
+  - Cotacoes Yahoo com 15-20 min de atraso, excepto Helsinquia.
+    Cada alerta e um candidato, nao uma ordem. Confirmar no xStation.
+  - O motor e um filtro, nao um preditor. Nenhum parametro aqui
+    prediz precos.
+
+
+ESTRUTURA
+---------
+  Config.kt          constantes, as 100 accoes, impostos, peso horario
+  Indicadores.kt     EMA, RSI, ATR, Bollinger, VWAP
+  Motor.kt           avaliacao, geometria do stop, custos, dimensionamento
+  Json.kt            leitor de JSON proprio, sem dependencias
+  Dados.kt           Yahoo Finance: velas de 15 min e noticias RSS
+  Estado.kt          persistencia e lista de alertas
+  ServicoMonitor.kt  servico em primeiro plano e ciclo de varrimento
+  Notificacoes.kt    canais e avisos
+  MainActivity.kt    ecra
+  Email.kt           envio por Web3Forms
+  ArranqueReceiver.kt  religa depois do reinicio
+
+
+VALIDACAO JA FEITA
+------------------
+  Modulo completo compilado com Kotlin 2.0.21 contra o SDK do Android:
+  30 classes, zero erros. Nao ha uma unica dependencia externa — sem
+  AndroidX, sem AppCompat, sem Material. O ecra e construido em codigo.
+
+  Paridade com a versao web medida, nao assumida: 5 accoes de 5 bolsas
+  diferentes x 4 momentos da sessao (09:45, 10:30, 14:00, 17:15), as
+  mesmas velas nos dois motores, relogio fixado no mesmo instante.
+  20 comparacoes em 20 identicas. Maior desvio numerico 1x10^-6, e so
+  em arredondamento de casas decimais. Pontuacao, entrada, stop, alvo,
+  quantidade, custos e lista de vetos batem todos certo.
+
+  As 38 constantes do motor e as 100 accoes foram cruzadas uma a uma
+  contra o objecto C do Scalper_Alerts.html: sem divergencias.
+
+  O que NAO foi verificado aqui: o comportamento da camada Android em
+  telemovel real — servico, notificacoes, arranque. Isso so o primeiro
+  Run no Android Studio valida.
